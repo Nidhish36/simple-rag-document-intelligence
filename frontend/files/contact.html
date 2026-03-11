@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>VELA — Contact</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100;200;300;400;500;600;700;800;900&family=Geist+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --black:#080808;--g900:#111111;--g800:#1a1a1a;--g700:#242424;
+  --g600:#333333;--g500:#4a4a4a;--g400:#666666;--g300:#888888;
+  --g200:#aaaaaa;--g100:#cccccc;--g050:#e5e5e5;--white:#f5f5f5;
+  --border:1px solid rgba(255,255,255,0.07);
+  --border-md:1px solid rgba(255,255,255,0.12);
+  --border-bright:1px solid rgba(255,255,255,0.22);
+  --ff:'Geist',system-ui,sans-serif;
+  --fm:'Geist Mono',monospace;
+}
+html,body{background:var(--black);color:var(--white);font-family:var(--ff);overflow-x:hidden;cursor:none;}
+
+/* grid bg */
+#grid-bg{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(rgba(255,255,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.025) 1px,transparent 1px);
+  background-size:80px 80px;}
+#grid-bg::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 80% at 50% 50%,transparent 40%,var(--black) 100%);}
+
+/* cursor */
+#c-dot{position:fixed;width:5px;height:5px;border-radius:50%;background:var(--white);pointer-events:none;z-index:99999;transform:translate(-50%,-50%);}
+#c-ring{position:fixed;width:26px;height:26px;border-radius:50%;border:var(--border-md);pointer-events:none;z-index:99998;transform:translate(-50%,-50%);transition:width .18s,height .18s,border-color .18s;}
+#c-ring.hover{width:44px;height:44px;border-color:rgba(255,255,255,.5);}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:500;height:52px;display:flex;align-items:center;padding:0 32px;border-bottom:var(--border);background:rgba(8,8,8,0.85);backdrop-filter:blur(20px);}
+nav::before{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent);}
+.nav-mark{width:28px;height:28px;border:var(--border-md);display:flex;align-items:center;justify-content:center;margin-right:14px;flex-shrink:0;position:relative;}
+.nav-mark::before{content:'';position:absolute;top:3px;left:3px;right:3px;bottom:3px;border:1px solid rgba(255,255,255,0.08);}
+.nav-mark-inner{width:6px;height:6px;background:var(--white);}
+.nav-wordmark{font-size:0.82rem;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--white);text-decoration:none;}
+.nav-sep{flex:1;}
+.nav-links{display:flex;gap:0;align-items:center;margin-right:20px;}
+.nav-link{padding:0 16px;height:52px;display:flex;align-items:center;font-family:var(--fm);font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--g300);text-decoration:none;cursor:none;transition:color .15s;border-left:var(--border);}
+.nav-link:hover,.nav-link.active{color:var(--white);}
+.nav-status{display:flex;align-items:center;gap:7px;border:var(--border-md);padding:6px 14px;font-family:var(--fm);font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--g200);}
+.status-dot{width:5px;height:5px;border-radius:50%;background:var(--white);animation:blink 2.4s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.2;}}
+
+/* PAGE */
+#page{position:relative;z-index:2;padding-top:52px;}
+
+/* CONTACT HERO */
+.contact-hero{
+  min-height:38vh;display:flex;flex-direction:column;justify-content:flex-end;
+  padding:60px 80px 48px;border-bottom:var(--border);position:relative;overflow:hidden;
+}
+.contact-hero::before{
+  content:'';position:absolute;bottom:0;right:0;width:500px;height:500px;
+  border:var(--border);transform:rotate(45deg) translate(200px,200px);
+  pointer-events:none;
+}
+.contact-hero::after{
+  content:'';position:absolute;bottom:0;right:80px;width:320px;height:320px;
+  border:var(--border);transform:rotate(45deg) translate(120px,120px);
+  pointer-events:none;
+}
+.ch-tag{font-family:var(--fm);font-size:0.56rem;letter-spacing:0.28em;text-transform:uppercase;color:var(--g400);margin-bottom:16px;display:flex;align-items:center;gap:10px;}
+.ch-tag::before{content:'';width:20px;height:1px;background:var(--g400);}
+.contact-hero h1{font-size:clamp(2.5rem,5vw,5rem);font-weight:200;letter-spacing:-0.03em;color:var(--white);line-height:1.05;margin-bottom:16px;}
+.contact-hero h1 strong{font-weight:700;}
+.contact-hero p{font-size:0.9rem;font-weight:300;color:var(--g300);max-width:400px;line-height:1.7;}
+
+/* CONTACT BODY */
+.contact-body{
+  display:grid;grid-template-columns:1fr 1fr;
+  border-bottom:var(--border);
+  min-height:60vh;
+}
+
+/* LEFT — form */
+.contact-form-panel{
+  padding:60px 80px;border-right:var(--border);
+}
+.form-section-label{font-family:var(--fm);font-size:0.56rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--g300);margin-bottom:36px;display:flex;align-items:center;gap:10px;}
+.form-section-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--g600),transparent);}
+
+.field{margin-bottom:28px;position:relative;}
+.field-label{font-family:var(--fm);font-size:0.56rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--g300);display:block;margin-bottom:10px;}
+.field input,.field textarea,.field select{
+  width:100%;background:rgba(255,255,255,0.03);border:none;
+  border-bottom:1px solid rgba(255,255,255,0.2);
+  padding:12px 0;font-family:var(--ff);font-size:0.9rem;font-weight:300;
+  color:var(--white);outline:none;transition:border-color .2s,background .2s;
+  -webkit-appearance:none;
+}
+.field textarea{resize:none;height:100px;font-family:var(--ff);}
+.field input::placeholder,.field textarea::placeholder{color:var(--g500);}
+.field input:focus,.field textarea:focus{border-bottom-color:rgba(255,255,255,0.55);background:rgba(255,255,255,0.04);}
+
+/* animated underline fill */
+.field::after{content:'';position:absolute;bottom:0;left:0;width:0;height:1px;background:var(--white);transition:width .3s ease;}
+.field:focus-within::after{width:100%;}
+
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:24px;}
+
+.submit-btn{
+  display:flex;align-items:center;gap:10px;
+  background:var(--white);color:var(--black);
+  border:none;padding:13px 28px;
+  font-family:var(--ff);font-size:0.76rem;font-weight:600;
+  letter-spacing:0.1em;text-transform:uppercase;
+  cursor:none;transition:all .18s;margin-top:8px;
+  position:relative;overflow:hidden;
+}
+.submit-btn::before{content:'';position:absolute;inset:0;background:linear-gradient(120deg,transparent 30%,rgba(0,0,0,0.06) 50%,transparent 70%);transform:translateX(-100%);transition:transform .4s;}
+.submit-btn:hover::before{transform:translateX(100%);}
+.submit-btn:hover{background:var(--g050);transform:translateY(-1px);}
+.submit-btn svg{width:14px;height:14px;}
+
+/* RIGHT — info panels */
+.contact-info-panel{padding:60px 60px;}
+
+.info-block{margin-bottom:44px;}
+.ib-label{font-family:var(--fm);font-size:0.54rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--g300);margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.ib-label::before{content:'◆';font-size:0.4rem;color:var(--g400);}
+.ib-title{font-size:1.05rem;font-weight:400;color:var(--white);margin-bottom:6px;letter-spacing:-0.01em;}
+.ib-sub{font-size:0.82rem;font-weight:300;color:var(--g300);line-height:1.7;}
+.ib-link{
+  display:inline-flex;align-items:center;gap:8px;margin-top:12px;
+  font-family:var(--fm);font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;
+  color:var(--g200);text-decoration:none;cursor:none;
+  border-bottom:1px solid rgba(255,255,255,0.18);padding-bottom:3px;
+  transition:color .15s,border-color .15s;
+}
+.ib-link:hover{color:var(--white);border-bottom-color:rgba(255,255,255,0.5);}
+.ib-link svg{width:12px;height:12px;transition:transform .18s;}
+.ib-link:hover svg{transform:translate(2px,-2px);}
+
+.info-divider{width:100%;height:1px;background:var(--g600);margin:32px 0;}
+
+/* Status row */
+.status-row{display:flex;align-items:center;gap:12px;padding:16px;border:1px solid rgba(255,255,255,0.1);background:var(--g900);}
+.sr-dot{width:7px;height:7px;background:var(--g200);animation:blink 2s ease-in-out infinite;}
+.sr-text{font-family:var(--fm);font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--g300);}
+.sr-val{font-family:var(--fm);font-size:0.6rem;letter-spacing:0.1em;color:var(--white);margin-left:auto;}
+
+/* CONFIRMATION OVERLAY */
+#confirm-overlay{
+  position:fixed;inset:0;z-index:999;
+  background:rgba(8,8,8,0.96);
+  backdrop-filter:blur(20px);
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .4s;
+}
+#confirm-overlay.on{opacity:1;pointer-events:all;}
+.confirm-box{
+  text-align:center;max-width:400px;
+  border:var(--border-md);padding:52px 48px;background:var(--g900);
+  position:relative;
+}
+.confirm-box::before{content:'';position:absolute;top:-1px;left:-1px;width:20px;height:20px;border-top:var(--border-bright);border-left:var(--border-bright);}
+.confirm-box::after{content:'';position:absolute;bottom:-1px;right:-1px;width:20px;height:20px;border-bottom:var(--border-bright);border-right:var(--border-bright);}
+.confirm-icon{
+  width:52px;height:52px;border:var(--border-md);
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 24px;transform:rotate(45deg);
+}
+.confirm-icon svg{transform:rotate(-45deg);width:22px;height:22px;color:var(--white);}
+.confirm-title{font-size:1.4rem;font-weight:300;color:var(--white);letter-spacing:-0.02em;margin-bottom:8px;}
+.confirm-sub{font-family:var(--fm);font-size:0.6rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--g500);margin-bottom:28px;}
+.confirm-close{
+  background:transparent;border:var(--border-md);
+  padding:10px 24px;font-family:var(--fm);font-size:0.6rem;
+  letter-spacing:0.16em;text-transform:uppercase;color:var(--g300);
+  cursor:none;transition:all .18s;
+}
+.confirm-close:hover{color:var(--white);border-color:rgba(255,255,255,.35);}
+
+/* FOOTER */
+footer{padding:24px 32px;border-top:var(--border);display:flex;align-items:center;justify-content:space-between;}
+.ft-l{font-family:var(--fm);font-size:0.56rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--g500);}
+.ft-r{display:flex;gap:20px;}
+.ft-link{font-family:var(--fm);font-size:0.54rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--g500);text-decoration:none;cursor:none;transition:color .15s;}
+.ft-link:hover{color:var(--g100);}
+
+/* ANIMS */
+.fade-up{opacity:0;transform:translateY(20px);transition:opacity .7s cubic-bezier(.16,1,.3,1),transform .7s cubic-bezier(.16,1,.3,1);}
+.fade-up.in{opacity:1;transform:translateY(0);}
+.fade-up.d1{transition-delay:.08s;}.fade-up.d2{transition-delay:.16s;}.fade-up.d3{transition-delay:.24s;}
+</style>
+</head>
+<body>
+<div id="grid-bg"></div>
+<div id="c-dot"></div>
+<div id="c-ring"></div>
+
+<!-- NAV -->
+<nav>
+  <a href="index.html" style="display:flex;align-items:center;text-decoration:none;gap:14px;">
+    <div class="nav-mark"><div class="nav-mark-inner"></div></div>
+    <div class="nav-wordmark">VELA</div>
+  </a>
+  <div class="nav-sep"></div>
+  <div class="nav-links">
+    <a href="index.html" class="nav-link">Home</a>
+    <a href="docs.html" class="nav-link">View Doc</a>
+    <a href="contact.html" class="nav-link active">Contact</a>
+  </div>
+  <div class="nav-status"><span class="status-dot"></span>System Online</div>
+</nav>
+
+<div id="page">
+  <!-- HERO -->
+  <div class="contact-hero">
+    <div class="ch-tag">Page 03 · Contact</div>
+    <h1>Get in<br><strong>Touch.</strong></h1>
+    <p>Questions about the pipeline, integration help, or just want to say hello — send a transmission.</p>
+  </div>
+
+  <!-- BODY -->
+  <div class="contact-body">
+    <!-- FORM -->
+    <div class="contact-form-panel fade-up">
+      <div class="form-section-label">Send a Transmission</div>
+      <form id="contact-form" onsubmit="submitForm(event)">
+        <div class="field-row">
+          <div class="field fade-up d1">
+            <label class="field-label">First Name</label>
+            <input type="text" placeholder="Ada" required/>
+          </div>
+          <div class="field fade-up d1">
+            <label class="field-label">Last Name</label>
+            <input type="text" placeholder="Lovelace" required/>
+          </div>
+        </div>
+        <div class="field fade-up d2">
+          <label class="field-label">Email Address</label>
+          <input type="email" placeholder="ada@example.com" required/>
+        </div>
+        <div class="field fade-up d2">
+          <label class="field-label">Subject</label>
+          <input type="text" placeholder="Integration question…"/>
+        </div>
+        <div class="field fade-up d3">
+          <label class="field-label">Message</label>
+          <textarea placeholder="Tell us what's on your mind…" required></textarea>
+        </div>
+        <button type="submit" class="submit-btn fade-up d3">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          Send Message
+        </button>
+      </form>
+    </div>
+
+    <!-- INFO -->
+    <div class="contact-info-panel">
+      <div class="info-block fade-up">
+        <div class="ib-label">General</div>
+        <div class="ib-title">hello@vela.dev</div>
+        <div class="ib-sub">For general inquiries, integrations, and collaboration requests.</div>
+        <a href="mailto:hello@vela.dev" class="ib-link">
+          Send Email
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+        </a>
+      </div>
+
+      <div class="info-divider"></div>
+
+      <div class="info-block fade-up d1">
+        <div class="ib-label">Technical Support</div>
+        <div class="ib-title">docs@vela.dev</div>
+        <div class="ib-sub">Pipeline issues, API bugs, backend configuration. Include your error log.</div>
+        <a href="mailto:docs@vela.dev" class="ib-link">
+          Open Ticket
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+        </a>
+      </div>
+
+      <div class="info-divider"></div>
+
+      <div class="info-block fade-up d2">
+        <div class="ib-label">Response Time</div>
+        <div class="status-row">
+          <div class="sr-dot"></div>
+          <span class="sr-text">Average response</span>
+          <span class="sr-val">&lt; 24 hours</span>
+        </div>
+        <div class="status-row" style="margin-top:2px;">
+          <div class="sr-dot" style="animation-delay:.6s;"></div>
+          <span class="sr-text">System uptime</span>
+          <span class="sr-val">99.9%</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="ft-l">© 2025 VELA — Document Intelligence System</div>
+    <div class="ft-r">
+      <a href="index.html" class="ft-link">Home</a>
+      <a href="docs.html" class="ft-link">View Doc</a>
+      <a href="contact.html" class="ft-link">Contact</a>
+    </div>
+  </footer>
+</div>
+
+<!-- Confirmation -->
+<div id="confirm-overlay">
+  <div class="confirm-box">
+    <div class="confirm-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <div class="confirm-title">Transmission Sent</div>
+    <div class="confirm-sub">We'll respond within 24 hours</div>
+    <button class="confirm-close" onclick="document.getElementById('confirm-overlay').classList.remove('on')">Dismiss</button>
+  </div>
+</div>
+
+<script>
+const dot=document.getElementById('c-dot'),ring=document.getElementById('c-ring');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;dot.style.left=mx+'px';dot.style.top=my+'px';});
+(function rl(){rx+=(mx-rx)*.12;ry+=(my-ry)*.12;ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(rl);})();
+document.querySelectorAll('a,button,.ib-link,.nav-link').forEach(el=>{
+  el.addEventListener('mouseenter',()=>ring.classList.add('hover'));
+  el.addEventListener('mouseleave',()=>ring.classList.remove('hover'));
+});
+const obs=new IntersectionObserver(e=>e.forEach(e=>e.isIntersecting&&e.target.classList.add('in')),{threshold:.1,rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.fade-up').forEach(el=>obs.observe(el));
+function submitForm(e){
+  e.preventDefault();
+  document.getElementById('confirm-overlay').classList.add('on');
+}
+</script>
+</body>
+</html>

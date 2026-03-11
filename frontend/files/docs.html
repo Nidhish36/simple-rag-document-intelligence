@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>VELA — View Document</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@100;200;300;400;500;600;700;800;900&family=Geist+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --black:#080808;--g900:#111111;--g800:#1a1a1a;--g700:#242424;
+  --g600:#333333;--g500:#4a4a4a;--g400:#666666;--g300:#888888;
+  --g200:#aaaaaa;--g100:#cccccc;--g050:#e5e5e5;--white:#f5f5f5;
+  --border:1px solid rgba(255,255,255,0.07);
+  --border-md:1px solid rgba(255,255,255,0.12);
+  --border-bright:1px solid rgba(255,255,255,0.22);
+  --ff:'Geist',system-ui,sans-serif;
+  --fm:'Geist Mono',monospace;
+}
+html,body{background:var(--black);color:var(--white);font-family:var(--ff);overflow-x:hidden;cursor:none;}
+
+/* ═══════════════════════════════════════════
+   LOADING SCREEN
+═══════════════════════════════════════════ */
+#loader{
+  position:fixed;inset:0;z-index:9000;
+  background:var(--black);
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:0;
+  transition:opacity .6s ease,transform .6s ease;
+}
+#loader.exit{
+  opacity:0;
+  pointer-events:none;
+}
+
+/* Canvas fills loader */
+#loader-canvas{
+  position:absolute;inset:0;
+  pointer-events:none;
+}
+
+/* Central content */
+.loader-center{
+  position:relative;z-index:2;
+  display:flex;flex-direction:column;align-items:center;
+  gap:0;
+}
+
+/* Animated geometric ring system */
+.ring-system{
+  position:relative;
+  width:180px;height:180px;
+  margin-bottom:40px;
+}
+.ring{
+  position:absolute;
+  border-radius:50%;
+  border:1px solid transparent;
+  inset:0;margin:auto;
+}
+.ring-1{
+  width:180px;height:180px;
+  border-top-color:rgba(255,255,255,0.7);
+  border-right-color:rgba(255,255,255,0.15);
+  border-bottom-color:rgba(255,255,255,0.05);
+  border-left-color:rgba(255,255,255,0.15);
+  animation:spin1 1.8s linear infinite;
+}
+.ring-2{
+  width:140px;height:140px;
+  border-top-color:rgba(255,255,255,0.4);
+  border-right-color:rgba(255,255,255,0.08);
+  border-bottom-color:rgba(255,255,255,0.4);
+  border-left-color:rgba(255,255,255,0.08);
+  animation:spin2 2.6s linear infinite reverse;
+}
+.ring-3{
+  width:100px;height:100px;
+  border-top-color:rgba(255,255,255,0.9);
+  border-right-color:transparent;
+  border-bottom-color:rgba(255,255,255,0.2);
+  border-left-color:transparent;
+  animation:spin1 1.1s linear infinite;
+}
+.ring-4{
+  width:60px;height:60px;
+  border:1px solid rgba(255,255,255,0.08);
+  animation:spin2 3s linear infinite;
+}
+/* Center diamond */
+.ring-center{
+  position:absolute;inset:0;margin:auto;
+  width:16px;height:16px;
+  border:1px solid rgba(255,255,255,0.5);
+  transform:rotate(45deg);
+  animation:center-pulse 2s ease-in-out infinite;
+}
+.ring-center::before{
+  content:'';position:absolute;inset:3px;
+  background:var(--white);
+  animation:center-pulse 2s ease-in-out infinite reverse;
+}
+
+@keyframes spin1{to{transform:rotate(360deg);}}
+@keyframes spin2{to{transform:rotate(-360deg);}}
+@keyframes center-pulse{0%,100%{opacity:1;transform:rotate(45deg) scale(1);}50%{opacity:.4;transform:rotate(45deg) scale(.6);}}
+
+/* Scanning line that sweeps through */
+.scan-line{
+  position:absolute;
+  width:100%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.6),transparent);
+  top:0;left:0;
+  animation:scan 2.4s ease-in-out infinite;
+  pointer-events:none;
+}
+@keyframes scan{
+  0%{top:0%;opacity:0;}
+  5%{opacity:1;}
+  50%{top:100%;opacity:1;}
+  55%{opacity:0;}
+  100%{top:100%;opacity:0;}
+}
+
+/* Text section */
+.loader-title{
+  font-family:var(--fm);font-size:0.58rem;
+  letter-spacing:0.28em;text-transform:uppercase;
+  color:var(--g600);margin-bottom:10px;
+}
+.loader-status{
+  font-size:1.3rem;font-weight:200;
+  letter-spacing:-0.02em;color:var(--white);
+  margin-bottom:24px;
+  min-height:1.6em;
+  text-align:center;
+}
+/* Typewriter cursor on status */
+.loader-status::after{
+  content:'|';
+  animation:blink-cur .7s step-end infinite;
+  color:var(--g500);
+}
+@keyframes blink-cur{0%,100%{opacity:1;}50%{opacity:0;}}
+
+/* Progress track */
+.loader-progress{
+  width:280px;height:1px;
+  background:var(--g800);
+  position:relative;overflow:hidden;
+  margin-bottom:16px;
+}
+.loader-progress-fill{
+  height:100%;background:var(--white);
+  width:0%;transition:width .15s ease;
+}
+/* Shimmer on progress bar */
+.loader-progress::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.4),transparent);
+  transform:translateX(-100%);
+  animation:shimmer 1.4s ease infinite;
+}
+@keyframes shimmer{to{transform:translateX(200%);}}
+
+.loader-pct{
+  font-family:var(--fm);font-size:0.56rem;
+  letter-spacing:0.14em;color:var(--g600);
+  display:flex;justify-content:space-between;
+  width:280px;
+}
+
+/* Log lines that appear below */
+.loader-log{
+  margin-top:28px;
+  width:340px;
+  border:var(--border);
+  padding:12px 16px;
+  background:var(--g900);
+  max-height:100px;
+  overflow:hidden;
+  position:relative;
+}
+.loader-log::before{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:40px;
+  background:linear-gradient(transparent,var(--g900));
+  pointer-events:none;z-index:1;
+}
+.log-header{
+  font-family:var(--fm);font-size:0.5rem;
+  letter-spacing:0.2em;text-transform:uppercase;
+  color:var(--g700);margin-bottom:8px;
+  display:flex;align-items:center;gap:6px;
+}
+.log-header::before{content:'›';color:var(--g600);}
+.log-line{
+  font-family:var(--fm);font-size:0.58rem;
+  letter-spacing:0.04em;color:var(--g500);
+  line-height:1.8;
+  animation:log-appear .2s ease both;
+}
+.log-line.ok{color:var(--g300);}
+@keyframes log-appear{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+
+/* ═══════════════════════════════════════════
+   GRID BG
+═══════════════════════════════════════════ */
+#grid-bg{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(rgba(255,255,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.025) 1px,transparent 1px);
+  background-size:80px 80px;}
+#grid-bg::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 80% at 50% 50%,transparent 40%,var(--black) 100%);}
+
+/* ═══════════════════════════════════════════
+   CURSOR
+═══════════════════════════════════════════ */
+#c-dot{position:fixed;width:5px;height:5px;border-radius:50%;background:var(--white);pointer-events:none;z-index:99999;transform:translate(-50%,-50%);}
+#c-ring{position:fixed;width:26px;height:26px;border-radius:50%;border:var(--border-md);pointer-events:none;z-index:99998;transform:translate(-50%,-50%);transition:width .18s,height .18s,border-color .18s;}
+#c-ring.hover{width:44px;height:44px;border-color:rgba(255,255,255,.5);}
+
+/* ═══════════════════════════════════════════
+   NAV
+═══════════════════════════════════════════ */
+nav{position:fixed;top:0;left:0;right:0;z-index:500;height:52px;display:flex;align-items:center;padding:0 32px;border-bottom:var(--border);background:rgba(8,8,8,0.85);backdrop-filter:blur(20px);}
+nav::before{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.08),transparent);}
+.nav-mark{width:28px;height:28px;border:var(--border-md);display:flex;align-items:center;justify-content:center;margin-right:14px;flex-shrink:0;position:relative;}
+.nav-mark::before{content:'';position:absolute;top:3px;left:3px;right:3px;bottom:3px;border:1px solid rgba(255,255,255,0.08);}
+.nav-mark-inner{width:6px;height:6px;background:var(--white);}
+.nav-wordmark{font-size:0.82rem;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--white);text-decoration:none;}
+.nav-sep{flex:1;}
+.nav-links{display:flex;gap:0;align-items:center;margin-right:20px;}
+.nav-link{padding:0 16px;height:52px;display:flex;align-items:center;font-family:var(--fm);font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--g400);text-decoration:none;cursor:none;transition:color .15s;border-left:var(--border);}
+.nav-link:hover,.nav-link.active{color:var(--white);}
+.nav-status{display:flex;align-items:center;gap:7px;border:var(--border);padding:6px 14px;font-family:var(--fm);font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--g300);}
+.status-dot{width:5px;height:5px;border-radius:50%;background:var(--white);animation:blink 2.4s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.2;}}
+
+/* ═══════════════════════════════════════════
+   PAGE
+═══════════════════════════════════════════ */
+#page{position:relative;z-index:2;padding-top:52px;}
+
+/* ─── UPLOAD ZONE ─── */
+#upload-zone{
+  min-height:calc(100vh - 52px);
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  padding:60px 40px;
+  position:relative;
+}
+
+/* Corner brackets */
+.corner{position:absolute;width:28px;height:28px;}
+.corner.tl{top:24px;left:40px;border-top:var(--border-md);border-left:var(--border-md);}
+.corner.tr{top:24px;right:40px;border-top:var(--border-md);border-right:var(--border-md);}
+.corner.bl{bottom:24px;left:40px;border-bottom:var(--border-md);border-left:var(--border-md);}
+.corner.br{bottom:24px;right:40px;border-bottom:var(--border-md);border-right:var(--border-md);}
+
+.upload-header{text-align:center;margin-bottom:52px;}
+.upload-tag{font-family:var(--fm);font-size:0.56rem;letter-spacing:0.28em;text-transform:uppercase;color:var(--g600);display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:16px;}
+.upload-tag-line{width:28px;height:1px;background:var(--g700);}
+.upload-title{font-size:clamp(2rem,4vw,3.8rem);font-weight:200;letter-spacing:-0.03em;color:var(--white);margin-bottom:10px;}
+.upload-title strong{font-weight:700;}
+.upload-sub{font-family:var(--fm);font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--g600);}
+
+/* Drop zone */
+#drop-zone{
+  width:100%;max-width:560px;
+  border:var(--border-md);
+  padding:64px 40px;
+  text-align:center;
+  position:relative;
+  transition:border-color .25s,background .25s;
+  cursor:none;
+}
+#drop-zone.drag-over{
+  border-color:rgba(255,255,255,.4);
+  background:rgba(255,255,255,.02);
+}
+/* Animated corner accents */
+#drop-zone::before{content:'';position:absolute;top:-1px;left:-1px;width:24px;height:24px;border-top:var(--border-bright);border-left:var(--border-bright);}
+#drop-zone::after{content:'';position:absolute;bottom:-1px;right:-1px;width:24px;height:24px;border-bottom:var(--border-bright);border-right:var(--border-bright);}
+
+.dz-icon{
+  width:52px;height:52px;border:var(--border-md);
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 24px;
+  transition:border-color .25s;
+}
+#drop-zone:hover .dz-icon,.dz-icon.hover-on{border-color:rgba(255,255,255,.35);}
+.dz-icon svg{width:22px;height:22px;color:var(--g400);}
+
+.dz-title{font-size:1.0rem;font-weight:400;color:var(--white);margin-bottom:8px;letter-spacing:-0.01em;}
+.dz-sub{font-family:var(--fm);font-size:0.58rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--g600);margin-bottom:28px;}
+
+.dz-btn{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--white);color:var(--black);
+  border:none;padding:11px 22px;
+  font-family:var(--ff);font-size:0.72rem;font-weight:600;
+  letter-spacing:0.1em;text-transform:uppercase;cursor:none;
+  transition:background .18s,transform .18s;
+  margin-bottom:16px;
+}
+.dz-btn:hover{background:var(--g050);transform:translateY(-1px);}
+.dz-ghost-btn{
+  display:inline-flex;align-items:center;gap:8px;
+  background:transparent;color:var(--g400);
+  border:var(--border);padding:9px 20px;
+  font-family:var(--fm);font-size:0.6rem;
+  letter-spacing:0.12em;text-transform:uppercase;cursor:none;
+  transition:all .18s;margin-left:10px;
+}
+.dz-ghost-btn:hover{color:var(--white);border-color:rgba(255,255,255,.3);}
+
+#file-input{display:none;}
+.dz-formats{font-family:var(--fm);font-size:0.52rem;letter-spacing:0.12em;color:var(--g700);margin-top:16px;}
+
+/* Recent files */
+.recent-section{width:100%;max-width:560px;margin-top:32px;}
+.rs-label{font-family:var(--fm);font-size:0.54rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--g700);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.rs-label::after{content:'';flex:1;height:1px;background:var(--g800);}
+.recent-file{
+  display:flex;align-items:center;gap:12px;
+  padding:12px 16px;border:var(--border);
+  background:var(--g900);margin-bottom:2px;
+  cursor:none;transition:background .18s,border-color .18s;
+}
+.recent-file:hover{background:var(--g800);border-color:rgba(255,255,255,.12);}
+.rf-icon{width:28px;height:28px;border:var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.rf-icon svg{width:14px;height:14px;color:var(--g500);}
+.rf-name{font-size:0.8rem;font-weight:400;color:var(--g200);flex:1;}
+.rf-size{font-family:var(--fm);font-size:0.54rem;letter-spacing:0.1em;color:var(--g700);}
+.rf-date{font-family:var(--fm);font-size:0.52rem;letter-spacing:0.08em;color:var(--g700);margin-left:8px;}
+.rf-open{
+  font-family:var(--fm);font-size:0.52rem;letter-spacing:0.14em;text-transform:uppercase;
+  color:var(--g600);cursor:none;background:none;border:none;
+  padding:4px 10px;border-left:var(--border);
+  transition:color .15s;
+}
+.rf-open:hover{color:var(--white);}
+
+/* ─── VIEWER ─── */
+#viewer-zone{
+  display:none;
+  min-height:calc(100vh - 52px);
+  flex-direction:column;
+}
+#viewer-zone.visible{display:flex;}
+
+.viewer-toolbar{
+  height:48px;border-bottom:var(--border);
+  display:flex;align-items:center;padding:0 24px;gap:0;
+  background:var(--g900);flex-shrink:0;
+}
+.vt-file{
+  display:flex;align-items:center;gap:10px;
+  padding:0 20px 0 0;border-right:var(--border);
+  margin-right:20px;
+}
+.vt-icon{width:24px;height:24px;border:var(--border);display:flex;align-items:center;justify-content:center;}
+.vt-icon svg{width:12px;height:12px;color:var(--g500);}
+.vt-name{font-size:0.78rem;font-weight:400;color:var(--g200);}
+.vt-size{font-family:var(--fm);font-size:0.52rem;color:var(--g700);}
+.vt-actions{display:flex;align-items:center;gap:2px;margin-left:auto;}
+.vt-btn{
+  height:48px;padding:0 16px;display:flex;align-items:center;gap:7px;
+  background:none;border:none;border-left:var(--border);
+  font-family:var(--fm);font-size:0.58rem;letter-spacing:0.12em;text-transform:uppercase;
+  color:var(--g500);cursor:none;transition:color .15s,background .15s;
+}
+.vt-btn:hover{color:var(--g100);background:rgba(255,255,255,.03);}
+.vt-btn svg{width:13px;height:13px;}
+.vt-close{color:var(--g600);}
+
+.viewer-body{
+  flex:1;display:grid;
+  grid-template-columns:1fr 360px;
+}
+
+/* Document preview pane */
+#doc-preview{
+  border-right:var(--border);
+  padding:40px 48px;
+  overflow-y:auto;
+}
+#doc-preview::-webkit-scrollbar{width:3px;}
+#doc-preview::-webkit-scrollbar-thumb{background:var(--g700);}
+
+.doc-page{
+  background:rgba(255,255,255,0.03);
+  border:var(--border);
+  padding:48px 44px;
+  margin-bottom:16px;
+  min-height:700px;
+  position:relative;
+}
+.doc-page-num{
+  position:absolute;bottom:16px;right:20px;
+  font-family:var(--fm);font-size:0.5rem;
+  letter-spacing:0.14em;text-transform:uppercase;
+  color:var(--g700);
+}
+.doc-content{
+  font-size:0.86rem;line-height:1.9;
+  color:var(--g300);font-weight:300;
+}
+.doc-content h2{font-size:1.1rem;font-weight:500;color:var(--g100);margin:24px 0 10px;letter-spacing:-0.01em;}
+.doc-content p{margin-bottom:14px;}
+.doc-content .highlight{background:rgba(255,255,255,0.08);padding:1px 3px;}
+
+/* Chat panel in viewer */
+#viewer-chat{
+  display:flex;flex-direction:column;
+}
+.vc-head{
+  padding:14px 20px;border-bottom:var(--border);
+  display:flex;align-items:center;gap:10px;
+  background:rgba(17,17,17,0.6);flex-shrink:0;
+}
+.vc-head-title{font-size:0.74rem;font-weight:500;color:var(--g200);}
+.vc-head-sub{font-family:var(--fm);font-size:0.52rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--g700);margin-left:auto;}
+
+#vc-win{
+  flex:1;overflow-y:auto;padding:20px;
+  display:flex;flex-direction:column;gap:16px;
+  scroll-behavior:smooth;
+}
+#vc-win::-webkit-scrollbar{width:2px;}
+#vc-win::-webkit-scrollbar-thumb{background:var(--g700);}
+
+.vm-row{display:flex;gap:8px;animation:up .3s ease both;}
+.vm-row.user{flex-direction:row-reverse;}
+.vm-av{width:24px;height:24px;flex-shrink:0;align-self:flex-end;border:var(--border);display:flex;align-items:center;justify-content:center;font-family:var(--fm);font-size:0.38rem;color:var(--g500);transform:rotate(45deg);}
+.vm-av-u{background:var(--white);color:var(--black);}
+.vm-bw{display:flex;flex-direction:column;max-width:85%;}
+.vm-row.user .vm-bw{align-items:flex-end;}
+.vm-lbl{font-family:var(--fm);font-size:0.44rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--g700);margin-bottom:3px;}
+.vm-bb{padding:10px 13px;font-size:0.8rem;line-height:1.7;font-weight:300;}
+.vm-bb-ai{background:var(--g900);border:var(--border);color:var(--g100);}
+.vm-bb-u{background:var(--g800);border:var(--border-md);color:var(--white);font-weight:400;}
+
+#vtrow{display:none;gap:8px;}
+#vtrow.on{display:flex;}
+.vtbbl{background:var(--g900);border:var(--border);padding:10px 14px;display:flex;align-items:center;gap:5px;}
+.vtd{width:5px;height:5px;background:var(--g700);animation:tb 1.1s ease-in-out infinite;}
+.vtd:nth-child(2){animation-delay:.18s;}.vtd:nth-child(3){animation-delay:.36s;background:var(--g400);}
+@keyframes tb{0%,80%,100%{transform:scale(.6);opacity:.35;}40%{transform:scale(1.2);opacity:1;}}
+@keyframes up{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:none;}}
+
+.vc-input-bar{padding:12px;border-top:var(--border);background:rgba(17,17,17,0.6);flex-shrink:0;}
+.vc-ishell{display:flex;align-items:flex-end;gap:6px;border:var(--border-md);padding:3px 3px 3px 12px;transition:border-color .2s;}
+.vc-ishell:focus-within{border-color:rgba(255,255,255,.3);}
+#vc-input{flex:1;background:none;border:none;outline:none;font-family:var(--ff);font-size:0.8rem;font-weight:300;color:var(--white);line-height:1.65;resize:none;max-height:80px;padding:8px 0;scrollbar-width:none;}
+#vc-input::placeholder{color:var(--g700);}
+#vc-input::-webkit-scrollbar{display:none;}
+#vc-sbtn{width:34px;height:34px;background:var(--white);color:var(--black);border:none;cursor:none;flex-shrink:0;align-self:flex-end;margin-bottom:2px;display:flex;align-items:center;justify-content:center;transition:all .18s;}
+#vc-sbtn:hover{background:var(--g050);}
+#vc-sbtn:disabled{opacity:.2;}
+#vc-sbtn svg{width:12px;height:12px;}
+
+/* footer */
+footer{padding:24px 32px;border-top:var(--border);display:flex;align-items:center;justify-content:space-between;}
+.ft-l{font-family:var(--fm);font-size:0.56rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--g700);}
+.ft-r{display:flex;gap:20px;}
+.ft-link{font-family:var(--fm);font-size:0.54rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--g700);text-decoration:none;cursor:none;transition:color .15s;}
+.ft-link:hover{color:var(--g300);}
+
+/* toast */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(8px);background:var(--g900);border:var(--border);border-left:2px solid var(--g300);color:var(--g200);padding:9px 20px;font-family:var(--fm);font-size:0.6rem;letter-spacing:0.06em;opacity:0;pointer-events:none;z-index:9999;transition:all .28s;white-space:nowrap;}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+
+.fade-up{opacity:0;transform:translateY(20px);transition:opacity .7s cubic-bezier(.16,1,.3,1),transform .7s cubic-bezier(.16,1,.3,1);}
+.fade-up.in{opacity:1;transform:translateY(0);}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ LOADING SCREEN ═══════════ -->
+<div id="loader">
+  <canvas id="loader-canvas"></canvas>
+  <div class="loader-center">
+    <div class="ring-system">
+      <div class="scan-line"></div>
+      <div class="ring ring-1"></div>
+      <div class="ring ring-2"></div>
+      <div class="ring ring-3"></div>
+      <div class="ring ring-4"></div>
+      <div class="ring-center"></div>
+    </div>
+    <div class="loader-title">VELA · Document Processor</div>
+    <div class="loader-status" id="loader-status">Initialising...</div>
+    <div class="loader-progress">
+      <div class="loader-progress-fill" id="loader-fill"></div>
+    </div>
+    <div class="loader-pct">
+      <span id="loader-pct-l" style="font-family:var(--fm);font-size:.52rem;letter-spacing:.1em;color:var(--g700);">PROCESSING</span>
+      <span id="loader-pct-r" style="font-family:var(--fm);font-size:.52rem;letter-spacing:.1em;color:var(--g600);">0%</span>
+    </div>
+    <div class="loader-log">
+      <div class="log-header">System Log</div>
+      <div id="log-lines"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ GRID + CURSOR ═══════════ -->
+<div id="grid-bg"></div>
+<div id="c-dot"></div>
+<div id="c-ring"></div>
+
+<!-- ═══════════ PAGE ═══════════ -->
+<div id="page">
+  <nav>
+    <a href="index.html" style="display:flex;align-items:center;text-decoration:none;gap:14px;">
+      <div class="nav-mark"><div class="nav-mark-inner"></div></div>
+      <div class="nav-wordmark">VELA</div>
+    </a>
+    <div class="nav-sep"></div>
+    <div class="nav-links">
+      <a href="index.html" class="nav-link">Home</a>
+      <a href="docs.html" class="nav-link active">View Doc</a>
+      <a href="contact.html" class="nav-link">Contact</a>
+    </div>
+    <div class="nav-status"><span class="status-dot"></span>System Online</div>
+  </nav>
+
+  <!-- UPLOAD ZONE -->
+  <div id="upload-zone">
+    <div class="corner tl"></div><div class="corner tr"></div>
+    <div class="corner bl"></div><div class="corner br"></div>
+
+    <div class="upload-header fade-up">
+      <div class="upload-tag">
+        <span class="upload-tag-line"></span>
+        Page 02 · Document Viewer
+        <span class="upload-tag-line"></span>
+      </div>
+      <h1 class="upload-title">Load Your<br><strong>Document.</strong></h1>
+      <div class="upload-sub">PDF · TXT · Any Text File</div>
+    </div>
+
+    <div id="drop-zone" class="fade-up"
+      ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+      <div class="dz-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      </div>
+      <div class="dz-title">Drop document here</div>
+      <div class="dz-sub">or select a file to begin</div>
+      <div>
+        <button class="dz-btn" onclick="document.getElementById('file-input').click()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Select File
+        </button>
+        <button class="dz-ghost-btn" onclick="loadDemo()">Load Demo</button>
+      </div>
+      <input type="file" id="file-input" accept=".pdf,.txt,.md,.doc,.docx" onchange="handleFile(this.files[0])"/>
+      <div class="dz-formats">Supported: PDF · TXT · MD · DOC · DOCX</div>
+    </div>
+
+    <div class="recent-section fade-up" style="transition-delay:.1s;">
+      <div class="rs-label">Recent Documents</div>
+      <div class="recent-file" onclick="loadDemo('Research Paper')">
+        <div class="rf-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+        <span class="rf-name">Research_Paper_2024.pdf</span>
+        <span class="rf-size">2.4 MB</span>
+        <span class="rf-date">2 days ago</span>
+        <button class="rf-open">Open →</button>
+      </div>
+      <div class="recent-file" onclick="loadDemo('Technical Manual')">
+        <div class="rf-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+        <span class="rf-name">Technical_Manual_v3.pdf</span>
+        <span class="rf-size">5.1 MB</span>
+        <span class="rf-date">1 week ago</span>
+        <button class="rf-open">Open →</button>
+      </div>
+      <div class="recent-file" onclick="loadDemo('Annual Report')">
+        <div class="rf-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+        <span class="rf-name">Annual_Report_Q3.pdf</span>
+        <span class="rf-size">1.8 MB</span>
+        <span class="rf-date">2 weeks ago</span>
+        <button class="rf-open">Open →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIEWER ZONE -->
+  <div id="viewer-zone">
+    <div class="viewer-toolbar">
+      <div class="vt-file">
+        <div class="vt-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+        <span class="vt-name" id="vt-name">document.pdf</span>
+        <span class="vt-size" id="vt-size">—</span>
+      </div>
+      <div class="vt-actions">
+        <button class="vt-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Search</button>
+        <button class="vt-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Export</button>
+        <button class="vt-btn vt-close" onclick="closeViewer()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Close
+        </button>
+      </div>
+    </div>
+    <div class="viewer-body">
+      <div id="doc-preview"></div>
+      <div id="viewer-chat">
+        <div class="vc-head">
+          <span style="font-size:.9rem;">◆</span>
+          <div class="vc-head-title">Ask about this document</div>
+          <div class="vc-head-sub">RAG · Active</div>
+        </div>
+        <div id="vc-win">
+          <div id="vc-welcome" style="margin:auto;text-align:center;padding:24px 16px;">
+            <div style="font-family:var(--fm);font-size:.5rem;letter-spacing:.22em;text-transform:uppercase;color:var(--g700);margin-bottom:10px;">Document loaded</div>
+            <div style="font-size:.88rem;font-weight:300;color:var(--g300);margin-bottom:4px;">Ready for questions.</div>
+            <div style="font-family:var(--fm);font-size:.54rem;letter-spacing:.1em;text-transform:uppercase;color:var(--g700);">Type below to query</div>
+          </div>
+          <div id="vtrow" class="vm-row">
+            <div class="vm-av mav-ai">AI</div>
+            <div class="vm-bw"><div class="vm-lbl">Processing</div><div class="vtbbl"><div class="vtd"></div><div class="vtd"></div><div class="vtd"></div></div></div>
+          </div>
+        </div>
+        <div class="vc-input-bar">
+          <div class="vc-ishell">
+            <textarea id="vc-input" rows="1" maxlength="2000" placeholder="Ask about the document…"></textarea>
+            <button id="vc-sbtn" onclick="vcSend()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer id="main-footer">
+    <div class="ft-l">© 2025 VELA — Document Intelligence System</div>
+    <div class="ft-r">
+      <a href="index.html" class="ft-link">Home</a>
+      <a href="docs.html" class="ft-link">View Doc</a>
+      <a href="contact.html" class="ft-link">Contact</a>
+    </div>
+  </footer>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ─────────── CURSOR ─────────── */
+const dot=document.getElementById('c-dot'),ring=document.getElementById('c-ring');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;dot.style.left=mx+'px';dot.style.top=my+'px';});
+(function rl(){rx+=(mx-rx)*.12;ry+=(my-ry)*.12;ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(rl);})();
+function attachHover(){document.querySelectorAll('a,button,.recent-file,.rf-open').forEach(el=>{el.addEventListener('mouseenter',()=>ring.classList.add('hover'));el.addEventListener('mouseleave',()=>ring.classList.remove('hover'));});}
+attachHover();
+
+/* ─────────── LOADER CANVAS — floating particles ─────────── */
+(function(){
+  const cv=document.getElementById('loader-canvas');
+  const ctx=cv.getContext('2d');
+  let W,H,pts=[];
+  function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight;}
+  resize();window.addEventListener('resize',resize);
+  // Grid dots
+  for(let i=0;i<40;i++){
+    pts.push({
+      x:Math.random()*1,y:Math.random()*1,
+      vx:(Math.random()-.5)*.0003,vy:(Math.random()-.5)*.0003,
+      r:Math.random()*1.5+.5,a:Math.random()*.3+.05
+    });
+  }
+  let t=0;
+  function draw(){
+    t+=.008;ctx.clearRect(0,0,W,H);
+    // draw moving data-stream lines
+    ctx.strokeStyle='rgba(255,255,255,0.03)';
+    ctx.lineWidth=1;
+    for(let i=0;i<8;i++){
+      const y=((t*60*((i+1)*.12))%H);
+      ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();
+    }
+    // dots
+    pts.forEach(p=>{
+      p.x=(p.x+p.vx+1)%1;p.y=(p.y+p.vy+1)%1;
+      ctx.fillStyle=`rgba(255,255,255,${p.a})`;
+      ctx.beginPath();ctx.arc(p.x*W,p.y*H,p.r,0,Math.PI*2);ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+/* ─────────── LOADER SEQUENCE ─────────── */
+const loaderEl=document.getElementById('loader');
+const loaderStatus=document.getElementById('loader-status');
+const loaderFill=document.getElementById('loader-fill');
+const loaderPctR=document.getElementById('loader-pct-r');
+const logLines=document.getElementById('log-lines');
+let loaderActive=false;
+
+const LOG_MSGS=[
+  {t:0,  msg:'Mounting virtual filesystem...'},
+  {t:4,  msg:'Allocating document buffer [128MB]'},
+  {t:12, msg:'Parsing document structure...', ok:true},
+  {t:20, msg:'Extracting text layers...'},
+  {t:30, msg:'Tokenising content...', ok:true},
+  {t:40, msg:'Building vector index...'},
+  {t:52, msg:'Running semantic analysis...'},
+  {t:62, msg:'Embedding chunks [256-token]...', ok:true},
+  {t:72, msg:'Compiling retrieval graph...'},
+  {t:82, msg:'Calibrating similarity threshold...', ok:true},
+  {t:90, msg:'Warming up inference pipeline...'},
+  {t:96, msg:'All systems nominal.', ok:true},
+];
+const STATUS_MSGS=[
+  {at:0,  text:'Initialising system...'},
+  {at:10, text:'Reading document structure...'},
+  {at:30, text:'Extracting text content...'},
+  {at:55, text:'Building vector embeddings...'},
+  {at:75, text:'Indexing for retrieval...'},
+  {at:90, text:'Finalising pipeline...'},
+  {at:98, text:'Document ready.'},
+];
+
+function addLogLine(msg, ok){
+  const el=document.createElement('div');
+  el.className='log-line'+(ok?' ok':'');
+  el.textContent=(ok?'✓ ':'  ')+msg;
+  logLines.appendChild(el);
+  logLines.scrollTop=logLines.scrollHeight;
+}
+
+function runLoader(onDone){
+  loaderActive=true;
+  loaderEl.style.opacity='1';
+  loaderEl.style.transform='none';
+  loaderEl.style.pointerEvents='all';
+  loaderEl.classList.remove('exit');
+  loaderFill.style.width='0%';
+  loaderPctR.textContent='0%';
+  logLines.innerHTML='';
+
+  let pct=0;
+  let logIdx=0;
+  let statusIdx=0;
+
+  const iv=setInterval(()=>{
+    // Speed: slow at start, fast in middle, slow at end
+    const speed = pct < 20 ? 0.6 : pct < 80 ? 1.4 : 0.5;
+    pct=Math.min(100, pct+speed);
+
+    loaderFill.style.width=pct+'%';
+    loaderPctR.textContent=Math.floor(pct)+'%';
+
+    // Status text
+    for(let i=statusIdx;i<STATUS_MSGS.length;i++){
+      if(pct>=STATUS_MSGS[i].at){loaderStatus.textContent=STATUS_MSGS[i].text;statusIdx=i+1;}
+    }
+    // Log lines
+    for(let i=logIdx;i<LOG_MSGS.length;i++){
+      if(pct>=LOG_MSGS[i].t){addLogLine(LOG_MSGS[i].msg,LOG_MSGS[i].ok);logIdx=i+1;}
+    }
+
+    if(pct>=100){
+      clearInterval(iv);
+      setTimeout(()=>{
+        loaderEl.classList.add('exit');
+        setTimeout(onDone, 600);
+      }, 400);
+    }
+  }, 40);
+}
+
+/* ─────────── FADE-UP OBSERVER ─────────── */
+const obs=new IntersectionObserver(e=>e.forEach(e=>e.isIntersecting&&e.target.classList.add('in')),{threshold:.1,rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.fade-up').forEach(el=>obs.observe(el));
+
+/* ─────────── DRAG & DROP ─────────── */
+function onDragOver(e){e.preventDefault();document.getElementById('drop-zone').classList.add('drag-over');}
+function onDragLeave(){document.getElementById('drop-zone').classList.remove('drag-over');}
+function onDrop(e){e.preventDefault();onDragLeave();const f=e.dataTransfer.files[0];if(f)handleFile(f);}
+
+/* ─────────── FILE HANDLING ─────────── */
+function handleFile(file){
+  if(!file)return;
+  const name=file.name, size=formatSize(file.size);
+  startLoad(name, size);
+}
+function loadDemo(name='Sample Document'){
+  startLoad(name+'.pdf', '3.2 MB');
+}
+function formatSize(b){if(b<1024)return b+'B';if(b<1048576)return(b/1024).toFixed(1)+'KB';return(b/1048576).toFixed(1)+'MB';}
+
+let currentDocName='';
+function startLoad(name, size){
+  currentDocName=name;
+  document.getElementById('vt-name').textContent=name;
+  document.getElementById('vt-size').textContent=size;
+  runLoader(()=>{showViewer(name);});
+}
+
+function showViewer(name){
+  document.getElementById('upload-zone').style.display='none';
+  document.getElementById('main-footer').style.display='none';
+  const vz=document.getElementById('viewer-zone');
+  vz.classList.add('visible');
+  renderDocPreview(name);
+  document.getElementById('vc-input').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();vcSend();}});
+  document.getElementById('vc-input').addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,80)+'px';});
+  attachHover();
+}
+
+function closeViewer(){
+  document.getElementById('viewer-zone').classList.remove('visible');
+  document.getElementById('upload-zone').style.display='flex';
+  document.getElementById('main-footer').style.display='flex';
+  document.getElementById('doc-preview').innerHTML='';
+  document.getElementById('vc-win').innerHTML=`
+    <div id="vc-welcome" style="margin:auto;text-align:center;padding:24px 16px;">
+      <div style="font-family:var(--fm);font-size:.5rem;letter-spacing:.22em;text-transform:uppercase;color:var(--g700);margin-bottom:10px;">Document loaded</div>
+      <div style="font-size:.88rem;font-weight:300;color:var(--g300);margin-bottom:4px;">Ready for questions.</div>
+    </div>
+    <div id="vtrow" class="vm-row">
+      <div class="vm-av mav-ai">AI</div>
+      <div class="vm-bw"><div class="vm-lbl">Processing</div><div class="vtbbl"><div class="vtd"></div><div class="vtd"></div><div class="vtd"></div></div></div>
+    </div>`;
+}
+
+function renderDocPreview(name){
+  const p=document.getElementById('doc-preview');
+  p.innerHTML=`
+    <div class="doc-page">
+      <div class="doc-content">
+        <h2>${name.replace(/\.(pdf|txt|md|docx?)$/i,'')}</h2>
+        <p>This document has been processed and indexed by the VELA RAG pipeline. All text content has been tokenised, embedded, and is available for semantic retrieval.</p>
+        <p>The retrieval-augmented generation system has analysed the document structure, extracted <span class="highlight">key concepts</span>, and built a vector index for fast, precise querying.</p>
+        <p>You can now ask questions about this document using the interface on the right. The system will retrieve the most relevant passages and synthesise a grounded response.</p>
+        <h2>System Notes</h2>
+        <p>All processing was performed locally. No data was transmitted to external servers. The pipeline operates entirely within your environment, ensuring complete privacy and data sovereignty.</p>
+        <p>Vector index size: <span class="highlight">estimated 512 chunks</span>. Embedding model: local. Retrieval method: cosine similarity with MMR reranking.</p>
+        <p>To begin, type a question in the chat panel. The system supports natural language queries and will cite relevant sections from your document in its responses.</p>
+      </div>
+      <div class="doc-page-num">Page 1</div>
+    </div>
+    <div class="doc-page">
+      <div class="doc-content">
+        <h2>Extracted Metadata</h2>
+        <p>The document analysis pipeline has completed all preprocessing tasks. The following metadata was extracted during ingestion:</p>
+        <p>File type identified as PDF. Total pages estimated from token count. Language detected: English. Primary subject area: General Document.</p>
+        <p>The semantic chunker applied a sliding window of 256 tokens with 32-token overlap to maximise context continuity across chunk boundaries.</p>
+        <h2>Retrieval Configuration</h2>
+        <p>The retrieval system uses a hybrid approach combining dense vector search and sparse BM25 matching. Results are reranked using Maximal Marginal Relevance to minimise redundancy.</p>
+        <p>Response generation is constrained to information present in the retrieved passages. The model will indicate when a question cannot be answered from the document.</p>
+      </div>
+      <div class="doc-page-num">Page 2</div>
+    </div>`;
+}
+
+/* ─────────── VIEWER CHAT ─────────── */
+const vcWin=document.getElementById('vc-win');
+const vcInput=document.getElementById('vc-input');
+const vcSbtn=document.getElementById('vc-sbtn');
+let vcLoading=false;
+
+function vcAddMsg(role,text){
+  const w=document.getElementById('vc-welcome');
+  if(w)w.remove();
+  const row=document.createElement('div');row.className='vm-row '+role;
+  const av=document.createElement('div');av.className='vm-av vm-av-'+(role==='user'?'u':'ai');av.textContent=role==='user'?'◆':'AI';
+  const bw=document.createElement('div');bw.className='vm-bw';
+  const lb=document.createElement('div');lb.className='vm-lbl';lb.textContent=role==='user'?'You':'System';
+  const bb=document.createElement('div');bb.className='vm-bb vm-bb-'+(role==='user'?'u':'ai');bb.textContent=text;
+  bw.append(lb,bb);row.append(av,bw);
+  const tr=document.getElementById('vtrow');
+  if(tr)vcWin.insertBefore(row,tr); else vcWin.appendChild(row);
+  vcWin.scrollTo({top:vcWin.scrollHeight,behavior:'smooth'});
+}
+function vcSetTyping(v){const tr=document.getElementById('vtrow');if(!tr)return;tr.classList.toggle('on',v);if(v)vcWin.appendChild(tr);vcWin.scrollTo({top:vcWin.scrollHeight,behavior:'smooth'});}
+
+async function vcSend(){
+  const q=vcInput.value.trim();
+  if(!q||vcLoading)return;
+  vcLoading=true;vcSbtn.disabled=true;
+  vcAddMsg('user',q);
+  vcInput.value='';vcInput.style.height='auto';
+  vcSetTyping(true);
+  try{
+    const res=await fetch('http://127.0.0.1:8000/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q})});
+    if(!res.ok)throw new Error();
+    const d=await res.json();
+    vcSetTyping(false);vcAddMsg('ai',d.answer||'No response.');
+  }catch{
+    vcSetTyping(false);
+    vcAddMsg('ai','Cannot connect to backend at :8000 — start your server to query this document.');
+  }finally{vcLoading=false;vcSbtn.disabled=false;vcInput.focus();}
+}
+
+/* ─────────── TOAST ─────────── */
+function showToast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');setTimeout(()=>t.classList.remove('on'),3200);}
+
+/* Hide loader initially (it only shows when a file is loaded) */
+loaderEl.style.display='none';
+function startLoad(name, size){
+  currentDocName=name;
+  document.getElementById('vt-name').textContent=name;
+  document.getElementById('vt-size').textContent=size;
+  loaderEl.style.display='flex';
+  loaderEl.style.opacity='1';
+  loaderEl.classList.remove('exit');
+  runLoader(()=>{showViewer(name);});
+}
+</script>
+</body>
+</html>
